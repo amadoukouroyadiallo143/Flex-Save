@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "623301780098",
+    "project_id": "flexsave-a612c",
+    "storage_bucket": "flexsave-a612c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:623301780098:android:526d66ea003569c2828a9b",
+        "android_client_info": {
+          "package_name": "com.flexsave.flexsave_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUFqZTdQuJb4cnL3GqUojNg2wBtZcJbyI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

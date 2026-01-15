@@ -1,416 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/providers/vaults_provider.dart';
+import '../../core/models.dart';
 
-import '../../core/models/models.dart';
-import 'vault_provider.dart';
-
-class VaultDetailScreen extends ConsumerWidget {
+class VaultDetailScreen extends ConsumerStatefulWidget {
   final String vaultId;
 
-  const VaultDetailScreen({
-    super.key,
-    required this.vaultId,
-  });
+  const VaultDetailScreen({super.key, required this.vaultId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final vaultAsync = ref.watch(vaultDetailProvider(vaultId));
-    final operationState = ref.watch(vaultOperationsProvider);
-    final withdrawalsAsync = ref.watch(vaultWithdrawalsProvider(vaultId));
+  ConsumerState<VaultDetailScreen> createState() => _VaultDetailScreenState();
+}
 
-    ref.listen(vaultOperationsProvider, (previous, next) {
-      if (next.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!), backgroundColor: Colors.red),
-        );
-      }
-      if (next.successMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.successMessage!),
-            backgroundColor: Colors.green,
-          ),
-        );
-        ref.read(vaultOperationsProvider.notifier).clearMessages();
-      }
-    });
+class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
+  Vault? vault;
+  bool isLoading = true;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mon Coffre'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: vaultAsync.when(
-        data: (vault) {
-          if (vault == null) {
-            return const Center(child: Text('Coffre non trouvé'));
-          }
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(vaultDetailProvider(vaultId));
-              ref.invalidate(vaultWithdrawalsProvider(vaultId));
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Amount Card
-                  _buildAmountCard(context, vault),
-                  const SizedBox(height: 20),
-
-                  // Progress
-                  _buildProgressSection(context, vault),
-                  const SizedBox(height: 20),
-
-                  // Flexibility
-                  _buildFlexibilityCard(context, vault),
-                  const SizedBox(height: 20),
-
-                  // Actions
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: operationState.isLoading
-                              ? null
-                              : () => _showDepositDialog(context, ref, vault),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Déposer'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: (operationState.isLoading || vault.currentAmount <= 0)
-                              ? null
-                              : () => _showWithdrawDialog(context, ref, vault),
-                          icon: const Icon(Icons.remove),
-                          label: const Text('Retirer'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // History
-                  const Text(
-                    'Historique des retraits',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  withdrawalsAsync.when(
-                    data: (withdrawals) => withdrawals.isEmpty
-                        ? _buildEmptyHistory()
-                        : _buildWithdrawalsList(context, withdrawals),
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                    error: (_, __) => _buildEmptyHistory(),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const Center(child: Text('Erreur de chargement')),
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadVault();
   }
 
-  Widget _buildAmountCard(BuildContext context, VaultModel vault) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withOpacity(0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            vault.name,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${vault.currentAmount.toStringAsFixed(2)} €',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  vault.isLocked ? Icons.lock_outline : Icons.lock_open,
-                  color: Colors.white,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  vault.isLocked
-                      ? 'Débloqué le ${vault.formattedUnlockDate}'
-                      : 'Débloqué !',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _loadVault() async {
+    setState(() => isLoading = true);
+    final v = await ref.read(vaultsProvider.notifier).getVault(widget.vaultId);
+    if (mounted) {
+      setState(() {
+        vault = v;
+        isLoading = false;
+      });
+    }
   }
 
-  Widget _buildProgressSection(BuildContext context, VaultModel vault) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Progression',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              '${vault.currentAmount.toStringAsFixed(0)} / ${vault.targetAmount.toStringAsFixed(0)} €',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: vault.progressPercentage / 100,
-            minHeight: 12,
-            backgroundColor: Colors.grey.shade200,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '${vault.progressPercentage.toStringAsFixed(1)}% de l\'objectif',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFlexibilityCard(BuildContext context, VaultModel vault) {
-    final flexPercent = vault.flexibilityPercentage;
-    final flexAvailable = vault.flexibilityAvailable;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.shade100),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.percent,
-              color: Colors.orange.shade700,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Flexibilité disponible',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${flexAvailable.toStringAsFixed(2)} € sur ${flexPercent.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyHistory() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.history,
-            size: 48,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Aucun retrait',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWithdrawalsList(BuildContext context, List<WithdrawalModel> withdrawals) {
-    return Column(
-      children: withdrawals.map((w) => _buildWithdrawalItem(context, w)).toList(),
-    );
-  }
-
-  Widget _buildWithdrawalItem(BuildContext context, WithdrawalModel withdrawal) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: withdrawal.isEarly ? Colors.orange.shade100 : Colors.green.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.arrow_upward,
-              size: 16,
-              color: withdrawal.isEarly ? Colors.orange.shade700 : Colors.green.shade700,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '-${withdrawal.amount.toStringAsFixed(2)} €',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                if (withdrawal.fee > 0)
-                  Text(
-                    'Frais: ${withdrawal.fee.toStringAsFixed(2)} €',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${withdrawal.createdAt.day}/${withdrawal.createdAt.month}/${withdrawal.createdAt.year}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              if (withdrawal.isEarly)
-                Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Anticipé',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.orange.shade700,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDepositDialog(BuildContext context, WidgetRef ref, VaultModel vault) {
+  void _showDepositSheet() {
     final controller = TextEditingController();
-
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -419,139 +45,379 @@ class VaultDetailScreen extends ConsumerWidget {
       ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
           left: 24,
           right: 24,
           top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
             const Text(
-              'Déposer dans le coffre',
+              'Déposer',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             TextField(
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Montant',
-                suffixText: '€',
-                filled: true,
-                fillColor: Colors.grey.shade50,
+                labelText: 'Montant (€)',
+                prefixIcon: const Icon(Icons.euro),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                final amount = double.tryParse(controller.text);
-                if (amount != null && amount > 0) {
-                  Navigator.pop(context);
-                  ref.read(vaultOperationsProvider.notifier).deposit(vault.id, amount);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final amount = double.tryParse(controller.text);
+                  if (amount != null && amount > 0) {
+                    Navigator.pop(context);
+                    final success = await ref.read(vaultsProvider.notifier).deposit(
+                      widget.vaultId,
+                      amount,
+                    );
+                    if (success) {
+                      _loadVault();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Dépôt de ${amount.toStringAsFixed(2)} € effectué ✅'),
+                            backgroundColor: const Color(0xFF10B981),
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Déposer', style: TextStyle(fontSize: 16)),
               ),
-              child: const Text('Confirmer le dépôt'),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  void _showWithdrawDialog(BuildContext context, WidgetRef ref, VaultModel vault) {
-    final controller = TextEditingController();
-    bool isEarly = vault.isLocked;
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Retirer du coffre',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    if (vault == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Coffre')),
+        body: const Center(child: Text('Coffre non trouvé')),
+      );
+    }
+
+    final v = vault!;
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(v.name),
+        actions: [
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 20),
+                    SizedBox(width: 8),
+                    Text('Modifier'),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              if (vault.isLocked)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber, color: Colors.orange.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Retrait anticipé: 1% de frais. Max ${vault.flexibilityAvailable.toStringAsFixed(2)}€',
-                          style: TextStyle(color: Colors.orange.shade700, fontSize: 13),
-                        ),
+              const PopupMenuItem(
+                value: 'close',
+                child: Row(
+                  children: [
+                    Icon(Icons.lock, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Clôturer', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (value) async {
+              if (value == 'close') {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Clôturer le coffre ?'),
+                    content: const Text('Êtes-vous sûr de vouloir clôturer ce coffre ?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Annuler'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Clôturer', style: TextStyle(color: Colors.red)),
                       ),
                     ],
                   ),
-                ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
-                decoration: InputDecoration(
-                  labelText: 'Montant',
-                  suffixText: '€',
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                );
+                
+                if (confirm == true) {
+                  await ref.read(vaultsProvider.notifier).closeVault(v.id);
+                  if (mounted) context.pop();
+                }
+              }
+            },
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadVault,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Amount card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF10B981),
+                      const Color(0xFF10B981).withOpacity(0.8),
+                    ],
                   ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Solde actuel',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${v.currentAmount.toStringAsFixed(2)} €',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Objectif: ${v.targetAmount.toStringAsFixed(2)} €',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 16),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: v.progress / 100,
+                        backgroundColor: Colors.white24,
+                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                        minHeight: 8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${v.progress.toStringAsFixed(1)}%',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  final amount = double.tryParse(controller.text);
-                  if (amount != null && amount > 0) {
-                    Navigator.pop(context);
-                    ref.read(vaultOperationsProvider.notifier).withdraw(
-                      vaultId: vault.id,
-                      amount: amount,
-                      isEarly: isEarly,
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+              
+              const SizedBox(height: 24),
+              
+              // Info cards
+              Row(
+                children: [
+                  Expanded(
+                    child: _InfoCard(
+                      icon: Icons.calendar_today,
+                      title: 'Date déblocage',
+                      value: '${v.unlockDate.day}/${v.unlockDate.month}/${v.unlockDate.year}',
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _InfoCard(
+                      icon: Icons.hourglass_empty,
+                      title: 'Jours restants',
+                      value: '${v.daysUntilUnlock}',
+                      color: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: _InfoCard(
+                      icon: Icons.tune,
+                      title: 'Flexibilité',
+                      value: '${v.flexibilityPercentage.toStringAsFixed(0)}%',
+                      color: Colors.purple,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _InfoCard(
+                      icon: Icons.wallet,
+                      title: 'Disponible',
+                      value: '${v.flexibilityAvailable.toStringAsFixed(2)} €',
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Status
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: v.isLocked ? Colors.orange.shade50 : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('Confirmer le retrait'),
+                child: Row(
+                  children: [
+                    Icon(
+                      v.isLocked ? Icons.lock : Icons.lock_open,
+                      color: v.isLocked ? Colors.orange : Colors.green,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        v.isLocked 
+                            ? 'Coffre verrouillé jusqu\'au ${v.unlockDate.day}/${v.unlockDate.month}/${v.unlockDate.year}'
+                            : 'Coffre débloqué ! Retrait sans frais disponible',
+                        style: TextStyle(
+                          color: v.isLocked ? Colors.orange.shade800 : Colors.green.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  // TODO: Show withdrawal sheet
+                },
+                icon: const Icon(Icons.arrow_upward),
+                label: const Text('Retirer'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _showDepositSheet,
+                icon: const Icon(Icons.arrow_downward),
+                label: const Text('Déposer'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color color;
+
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ],
       ),
     );
   }
