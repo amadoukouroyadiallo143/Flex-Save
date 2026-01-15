@@ -1,182 +1,154 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'models/models.dart';
-
-/// Base URL for the API
-const String _baseUrl = 'http://10.0.2.2:8000/api/v1'; // Android emulator
-// const String _baseUrl = 'http://localhost:8000/api/v1'; // iOS simulator
-
-/// API Client provider
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
-
-/// Auth token provider - will be set after login
-final authTokenProvider = StateProvider<String?>((ref) => null);
+import 'env.dart';
 
 /// API Client for FlexSave backend
 class ApiClient {
   late final Dio _dio;
+  String? _token;
 
   ApiClient() {
     _dio = Dio(BaseOptions(
-      baseUrl: _baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      baseUrl: Env.apiUrl,
+      connectTimeout: Duration(milliseconds: Env.connectionTimeout),
+      receiveTimeout: Duration(milliseconds: Env.receiveTimeout),
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
       },
     ));
 
-    // Add logging interceptor in debug mode
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        if (_token != null) {
+          options.headers['Authorization'] = 'Bearer $_token';
+        }
+        return handler.next(options);
+      },
+      onError: (error, handler) {
+        if (Env.isDebug) {
+          print('API Error: ${error.message}');
+        }
+        return handler.next(error);
+      },
     ));
   }
 
-  /// Set auth token for authenticated requests
-  void setAuthToken(String token) {
-    _dio.options.headers['Authorization'] = 'Bearer $token';
+  void setToken(String? token) {
+    _token = token;
   }
 
-  /// Clear auth token
-  void clearAuthToken() {
-    _dio.options.headers.remove('Authorization');
+  // Auth
+  Future<Map<String, dynamic>> verifyToken(String token) async {
+    final response = await _dio.post('/auth/verify-token', queryParameters: {'token': token});
+    return response.data;
   }
 
-  // ============ Auth ============
+  // Users
+  Future<Map<String, dynamic>> getCurrentUser() async {
+    final response = await _dio.get('/users/me');
+    return response.data;
+  }
 
-  /// Register a new user
-  Future<Map<String, dynamic>> register({
-    required String email,
-    required String password,
-    required String fullName,
-  }) async {
-    final response = await _dio.post('/auth/register', data: {
-      'email': email,
-      'password': password,
-      'full_name': fullName,
+  Future<Map<String, dynamic>> getUserStats() async {
+    final response = await _dio.get('/users/me/stats');
+    return response.data;
+  }
+
+  Future<void> updateUser(Map<String, dynamic> data) async {
+    await _dio.patch('/users/me', data: data);
+  }
+
+  // Vaults
+  Future<List<dynamic>> getVaults({bool activeOnly = true}) async {
+    final response = await _dio.get('/vaults/', queryParameters: {
+      'active_only': activeOnly,
     });
     return response.data;
   }
 
-  /// Verify token and get user
-  Future<UserModel> verifyToken(String token) async {
-    final response = await _dio.post('/auth/verify-token', queryParameters: {
-      'token': token,
-    });
-    return UserModel.fromJson(response.data);
+  Future<Map<String, dynamic>> getVault(String id) async {
+    final response = await _dio.get('/vaults/$id');
+    return response.data;
   }
 
-  // ============ Users ============
-
-  /// Get current user
-  Future<UserModel> getCurrentUser() async {
-    final response = await _dio.get('/users/me');
-    return UserModel.fromJson(response.data);
-  }
-
-  /// Get user stats
-  Future<UserStats> getUserStats() async {
-    final response = await _dio.get('/users/me/stats');
-    return UserStats.fromJson(response.data);
-  }
-
-  /// Update user
-  Future<UserModel> updateUser({String? fullName, bool? notificationEnabled}) async {
-    final data = <String, dynamic>{};
-    if (fullName != null) data['full_name'] = fullName;
-    if (notificationEnabled != null) data['notification_enabled'] = notificationEnabled;
-
-    final response = await _dio.patch('/users/me', data: data);
-    return UserModel.fromJson(response.data);
-  }
-
-  // ============ Vaults ============
-
-  /// Get all vaults
-  Future<List<VaultModel>> getVaults({bool activeOnly = true}) async {
-    final response = await _dio.get('/vaults/', queryParameters: {
-      'active_only': activeOnly,
-    });
-    return (response.data as List)
-        .map((json) => VaultModel.fromJson(json))
-        .toList();
-  }
-
-  /// Get single vault
-  Future<VaultModel> getVault(String vaultId) async {
-    final response = await _dio.get('/vaults/$vaultId');
-    return VaultModel.fromJson(response.data);
-  }
-
-  /// Create vault
-  Future<VaultModel> createVault({
+  Future<Map<String, dynamic>> createVault({
     required String name,
     required double targetAmount,
-    required DateTime unlockDate,
-    double flexibilityPercentage = 10.0,
+    required String unlockDate,
+    required double flexibilityPercentage,
   }) async {
     final response = await _dio.post('/vaults/', data: {
       'name': name,
       'target_amount': targetAmount,
-      'unlock_date': unlockDate.toIso8601String().split('T')[0],
+      'unlock_date': unlockDate,
       'flexibility_percentage': flexibilityPercentage,
     });
-    return VaultModel.fromJson(response.data);
+    return response.data;
   }
 
-  /// Deposit to vault
-  Future<VaultModel> deposit(String vaultId, double amount) async {
+  Future<Map<String, dynamic>> deposit(String vaultId, double amount) async {
     final response = await _dio.post('/vaults/$vaultId/deposit', data: {
       'amount': amount,
     });
-    return VaultModel.fromJson(response.data);
+    return response.data;
   }
 
-  /// Close vault
-  Future<void> closeVault(String vaultId) async {
-    await _dio.delete('/vaults/$vaultId');
+  Future<void> closeVault(String id) async {
+    await _dio.delete('/vaults/$id');
   }
 
-  // ============ Withdrawals ============
-
-  /// Preview withdrawal
-  Future<WithdrawalPreview> previewWithdrawal({
+  // Withdrawals
+  Future<Map<String, dynamic>> previewWithdrawal({
     required String vaultId,
     required double amount,
-    bool isEarly = false,
+    required bool isEarlyWithdrawal,
   }) async {
     final response = await _dio.post('/withdrawals/preview', data: {
       'vault_id': vaultId,
       'amount': amount,
-      'is_early_withdrawal': isEarly,
+      'is_early_withdrawal': isEarlyWithdrawal,
     });
-    return WithdrawalPreview.fromJson(response.data);
+    return response.data;
   }
 
-  /// Create withdrawal
-  Future<WithdrawalModel> createWithdrawal({
+  Future<Map<String, dynamic>> createWithdrawal({
     required String vaultId,
     required double amount,
-    bool isEarly = false,
+    required bool isEarlyWithdrawal,
   }) async {
     final response = await _dio.post('/withdrawals/', data: {
       'vault_id': vaultId,
       'amount': amount,
-      'is_early_withdrawal': isEarly,
+      'is_early_withdrawal': isEarlyWithdrawal,
     });
-    return WithdrawalModel.fromJson(response.data);
+    return response.data;
   }
 
-  /// Get withdrawals
-  Future<List<WithdrawalModel>> getWithdrawals({String? vaultId}) async {
+  Future<List<dynamic>> getWithdrawals({String? vaultId}) async {
     final response = await _dio.get('/withdrawals/', queryParameters: {
       if (vaultId != null) 'vault_id': vaultId,
     });
-    return (response.data as List)
-        .map((json) => WithdrawalModel.fromJson(json))
-        .toList();
+    return response.data;
+  }
+
+  // Notifications
+  Future<List<dynamic>> getNotifications({bool unreadOnly = false}) async {
+    final response = await _dio.get('/notifications/', queryParameters: {
+      'unread_only': unreadOnly,
+    });
+    return response.data;
+  }
+
+  Future<void> markNotificationAsRead(String id) async {
+    await _dio.post('/notifications/$id/read');
+  }
+
+  Future<void> markAllNotificationsAsRead() async {
+    await _dio.post('/notifications/read-all');
   }
 }
+
+/// Provider for API client
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return ApiClient();
+});

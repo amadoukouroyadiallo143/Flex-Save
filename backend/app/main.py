@@ -47,6 +47,27 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["Health"])
-async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
-    return {"status": "healthy", "app": settings.APP_NAME}
+async def health_check() -> dict:
+    """Health check endpoint with system info."""
+    import platform
+    from datetime import datetime
+    
+    return {
+        "status": "healthy",
+        "app": settings.APP_NAME,
+        "version": "0.1.0",
+        "timestamp": datetime.utcnow().isoformat(),
+        "python_version": platform.python_version(),
+        "environment": "development" if settings.DEBUG else "production",
+    }
+
+
+@app.get("/", tags=["Root"])
+async def root() -> dict:
+    """Root endpoint."""
+    return {
+        "message": f"Welcome to {settings.APP_NAME} API",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
