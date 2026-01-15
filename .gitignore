@@ -1,0 +1,146 @@
+# ==============================================================================
+# FlexSave - Global .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# OS Generated Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ------------------------------------------------------------------------------
+# IDE & Editors
+# ------------------------------------------------------------------------------
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.project
+.classpath
+.settings/
+
+# ------------------------------------------------------------------------------
+# Python / Backend
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+backend/lib/
+backend/lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.env
+.venv
+env/
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------------------------
+# Node.js / Web
+# ------------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+out/
+.nuxt/
+.cache/
+*.tsbuildinfo
+next-env.d.ts
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ------------------------------------------------------------------------------
+# Flutter / Mobile
+# ------------------------------------------------------------------------------
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+*.iml
+*.ipr
+*.iws
+.idea/
+*.jks
+*.p12
+*.p8
+*.key
+*.mobileprovision
+*.orig.*
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/ios/Runner.xcworkspace/
+coverage/
+
+# ------------------------------------------------------------------------------
+# Firebase
+# ------------------------------------------------------------------------------
+firebase-debug.log
+.firebase/
+
+# ------------------------------------------------------------------------------
+# Docker
+# ------------------------------------------------------------------------------
+docker-compose.override.yml
+
+# ------------------------------------------------------------------------------
+# Secrets & Credentials
+# ------------------------------------------------------------------------------
+*.pem
+*.key
+*.cert
+*.crt
+secrets/
+credentials/
+service-account*.json
+
+# ------------------------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------------------------
+logs/
+*.log
