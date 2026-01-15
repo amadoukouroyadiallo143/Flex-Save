@@ -11,9 +11,11 @@ import {
     LogOut,
     Menu,
     X,
+    Crown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationsDropdown } from '@/components/notifications-dropdown';
 import { useState } from 'react';
 
 const navItems = [
@@ -21,7 +23,9 @@ const navItems = [
     { href: '/dashboard/vaults', label: 'Mes Coffres', icon: Wallet },
     { href: '/dashboard/history', label: 'Historique', icon: History },
     { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
+    { href: '/dashboard/premium', label: 'Premium', icon: Crown, premium: true },
 ];
+
 
 export default function DashboardLayout({
     children,
@@ -42,6 +46,7 @@ export default function DashboardLayout({
                     <span className="font-bold text-gray-900 dark:text-white">FlexSave</span>
                 </div>
                 <div className="flex items-center gap-2">
+                    <NotificationsDropdown />
                     <ThemeToggle />
                     <Button
                         variant="ghost"
