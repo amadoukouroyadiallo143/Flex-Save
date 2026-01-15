@@ -1,14 +1,16 @@
 """
-API v1 Router - Aggregates all endpoint routers.
+API v1 router - aggregates all endpoint routers.
 """
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, vaults, withdrawals
+from app.api.v1.endpoints import auth, users, vaults, withdrawals, admin
 
-api_router = APIRouter()
+router = APIRouter()
 
-api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-api_router.include_router(users.router, prefix="/users", tags=["Users"])
-api_router.include_router(vaults.router, prefix="/vaults", tags=["Vaults"])
-api_router.include_router(withdrawals.router, prefix="/withdrawals", tags=["Withdrawals"])
+# Include all endpoint routers
+router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+router.include_router(users.router, prefix="/users", tags=["Users"])
+router.include_router(vaults.router, prefix="/vaults", tags=["Vaults"])
+router.include_router(withdrawals.router, prefix="/withdrawals", tags=["Withdrawals"])
+router.include_router(admin.router, prefix="/admin", tags=["Admin"])

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from app.core.firebase import get_firestore_client
-from app.models.user import User
+from app.models.user import User, UserRole
 
 
 class UserService:
@@ -19,6 +19,7 @@ class UserService:
         email: str,
         full_name: str,
         firebase_uid: str,
+        role: UserRole = UserRole.USER,
         stripe_customer_id: Optional[str] = None,
     ) -> User:
         """Create a new user in Firestore."""
@@ -28,6 +29,7 @@ class UserService:
             email=email,
             full_name=full_name,
             firebase_uid=firebase_uid,
+            role=role,
             stripe_customer_id=stripe_customer_id,
         )
         
@@ -76,8 +78,19 @@ class UserService:
         # Add updated_at
         kwargs["updated_at"] = datetime.utcnow().isoformat()
         
+        # Convert role enum to string if present
+        if "role" in kwargs and isinstance(kwargs["role"], UserRole):
+            kwargs["role"] = kwargs["role"].value
+        
         doc_ref.update(kwargs)
         return await self.get_by_id(user_id)
+    
+    async def update_last_login(self, user_id: str) -> None:
+        """Update user's last login time."""
+        db = get_firestore_client()
+        db.collection(self.COLLECTION).document(user_id).update({
+            "last_login": datetime.utcnow().isoformat()
+        })
     
     async def update_discipline_score(self, user_id: str, delta: float) -> Optional[User]:
         """Update user's discipline score."""
@@ -104,6 +117,12 @@ class UserService:
             "discipline_score": user.discipline_score if user else 0,
             "flexibility_used": total_flexibility_used,
         }
+    
+    async def get_all_users_count(self) -> int:
+        """Get total number of users."""
+        db = get_firestore_client()
+        docs = list(db.collection(self.COLLECTION).stream())
+        return len(docs)
 
 
 user_service = UserService()
