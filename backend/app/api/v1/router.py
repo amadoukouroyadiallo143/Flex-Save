@@ -4,7 +4,7 @@ API v1 router - aggregates all endpoint routers.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, users, vaults, withdrawals, admin, transactions, notifications
+from app.api.v1.endpoints import auth, users, vaults, withdrawals, admin, transactions, notifications, webhooks
 
 router = APIRouter()
 
@@ -16,3 +16,5 @@ router.include_router(withdrawals.router, prefix="/withdrawals", tags=["Withdraw
 router.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 router.include_router(admin.router, prefix="/admin", tags=["Admin"])
+router.include_router(webhooks.router, prefix="/webhooks", tags=["Webhooks"])
+
