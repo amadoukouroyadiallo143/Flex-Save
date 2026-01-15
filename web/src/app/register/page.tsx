@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useFirebaseAuth } from '@/lib/use-firebase-auth';
 
 export default function RegisterPage() {
     const router = useRouter();
+    const { signUp, loading: authLoading, error: authError } = useFirebaseAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [acceptTerms, setAcceptTerms] = useState(false);
@@ -30,23 +32,8 @@ export default function RegisterPage() {
         const password = formData.get('password') as string;
 
         try {
-            // TODO: Call API register endpoint
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email,
-                    password,
-                    full_name: fullName,
-                }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.detail || 'Erreur lors de l\'inscription');
-            }
-
-            router.push('/login?registered=true');
+            await signUp(email, password, fullName);
+            router.push('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Une erreur est survenue');
         } finally {
@@ -55,10 +42,10 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-blue-50 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <div className="mx-auto w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
+                    <div className="mx-auto w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl flex items-center justify-center mb-4">
                         <span className="text-2xl">💰</span>
                     </div>
                     <CardTitle className="text-2xl">Créer un compte</CardTitle>
@@ -68,9 +55,9 @@ export default function RegisterPage() {
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-4">
-                        {error && (
-                            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-                                {error}
+                        {(error || authError) && (
+                            <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                                {error || authError}
                             </div>
                         )}
                         <div className="space-y-2">
@@ -99,8 +86,8 @@ export default function RegisterPage() {
                                 id="password"
                                 name="password"
                                 type="password"
-                                placeholder="Minimum 8 caractères"
-                                minLength={8}
+                                placeholder="Minimum 6 caractères"
+                                minLength={6}
                                 required
                             />
                         </div>
@@ -112,7 +99,7 @@ export default function RegisterPage() {
                                 onChange={(e) => setAcceptTerms(e.target.checked)}
                                 className="mt-1"
                             />
-                            <label htmlFor="terms" className="text-sm text-gray-600">
+                            <label htmlFor="terms" className="text-sm text-gray-600 dark:text-gray-400">
                                 J&apos;accepte les{' '}
                                 <Link href="/terms" className="text-emerald-600 hover:underline">
                                     conditions d&apos;utilisation
@@ -128,11 +115,11 @@ export default function RegisterPage() {
                         <Button
                             type="submit"
                             className="w-full"
-                            disabled={isLoading || !acceptTerms}
+                            disabled={isLoading || authLoading || !acceptTerms}
                         >
                             {isLoading ? 'Création...' : 'Créer mon compte'}
                         </Button>
-                        <p className="text-sm text-center text-gray-600">
+                        <p className="text-sm text-center text-gray-600 dark:text-gray-400">
                             Déjà un compte ?{' '}
                             <Link href="/login" className="text-emerald-600 hover:underline font-medium">
                                 Se connecter

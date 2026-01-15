@@ -13,6 +13,7 @@ import {
     X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useState } from 'react';
 
 const navItems = [
@@ -31,37 +32,45 @@ export default function DashboardLayout({
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b px-4 py-3 flex items-center justify-between">
+            <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b dark:border-gray-800 px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center">
                         <span className="text-lg">💰</span>
                     </div>
-                    <span className="font-bold text-gray-900">FlexSave</span>
+                    <span className="font-bold text-gray-900 dark:text-white">FlexSave</span>
                 </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                >
-                    {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <ThemeToggle />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                    >
+                        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                    </Button>
+                </div>
             </header>
 
             {/* Sidebar */}
             <aside
                 className={cn(
-                    'fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r transition-transform lg:translate-x-0',
+                    'fixed top-0 left-0 z-40 h-screen w-64 bg-white dark:bg-gray-900 border-r dark:border-gray-800 transition-transform lg:translate-x-0',
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 )}
             >
                 {/* Logo */}
-                <div className="h-16 flex items-center gap-2 px-6 border-b">
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                        <span className="text-white text-xl">💰</span>
+                <div className="h-16 flex items-center justify-between gap-2 px-6 border-b dark:border-gray-800">
+                    <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                            <span className="text-white text-xl">💰</span>
+                        </div>
+                        <span className="text-xl font-bold text-gray-900 dark:text-white">FlexSave</span>
                     </div>
-                    <span className="text-xl font-bold text-gray-900">FlexSave</span>
+                    <div className="hidden lg:block">
+                        <ThemeToggle />
+                    </div>
                 </div>
 
                 {/* Navigation */}
@@ -76,8 +85,8 @@ export default function DashboardLayout({
                                 className={cn(
                                     'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
                                     isActive
-                                        ? 'bg-emerald-50 text-emerald-700'
-                                        : 'text-gray-600 hover:bg-gray-100'
+                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
+                                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                                 )}
                             >
                                 <item.icon className="h-5 w-5" />
@@ -88,13 +97,13 @@ export default function DashboardLayout({
                 </nav>
 
                 {/* Bottom */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t dark:border-gray-800">
                     <button
                         onClick={() => {
-                            // TODO: Implement logout
+                            localStorage.removeItem('token');
                             window.location.href = '/';
                         }}
-                        className="flex items-center gap-3 px-4 py-3 w-full text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 w-full text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
                     >
                         <LogOut className="h-5 w-5" />
                         <span className="font-medium">Déconnexion</span>

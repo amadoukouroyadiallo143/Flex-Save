@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { SavingsAreaChart, DistributionPieChart } from '@/components/charts';
 import Link from 'next/link';
 import {
     Wallet,
@@ -12,7 +13,7 @@ import {
     ArrowRight,
 } from 'lucide-react';
 
-// Mock data - will be replaced with API calls
+// Mock data
 const stats = {
     totalSaved: 3450.00,
     activeVaults: 3,
@@ -26,16 +27,31 @@ const recentVaults = [
     { id: '3', name: 'Nouvelle voiture', amount: 750, target: 5000, progress: 15 },
 ];
 
+const monthlyData = [
+    { month: 'Jan', amount: 800 },
+    { month: 'Fév', amount: 1200 },
+    { month: 'Mar', amount: 1800 },
+    { month: 'Avr', amount: 2200 },
+    { month: 'Mai', amount: 2800 },
+    { month: 'Juin', amount: 3450 },
+];
+
+const distributionData = [
+    { name: 'Vacances 2025', value: 1500 },
+    { name: 'Fonds d\'urgence', value: 1200 },
+    { name: 'Nouvelle voiture', value: 750 },
+];
+
 export default function DashboardPage() {
     return (
         <div className="p-6 lg:p-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div>
-                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                         Bonjour ! 👋
                     </h1>
-                    <p className="text-gray-600 mt-1">
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">
                         Voici un aperçu de votre épargne
                     </p>
                 </div>
@@ -52,12 +68,12 @@ export default function DashboardPage() {
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-emerald-100 rounded-xl">
-                                <Wallet className="h-6 w-6 text-emerald-600" />
+                            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl">
+                                <Wallet className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Épargne totale</p>
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Épargne totale</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                     {stats.totalSaved.toLocaleString('fr-FR')} €
                                 </p>
                             </div>
@@ -68,12 +84,12 @@ export default function DashboardPage() {
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-blue-100 rounded-xl">
-                                <Target className="h-6 w-6 text-blue-600" />
+                            <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
+                                <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Coffres actifs</p>
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Coffres actifs</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                     {stats.activeVaults}
                                 </p>
                             </div>
@@ -84,12 +100,12 @@ export default function DashboardPage() {
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-purple-100 rounded-xl">
-                                <Award className="h-6 w-6 text-purple-600" />
+                            <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
+                                <Award className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Score discipline</p>
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Score discipline</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                     {stats.disciplineScore}%
                                 </p>
                             </div>
@@ -100,16 +116,37 @@ export default function DashboardPage() {
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-orange-100 rounded-xl">
-                                <TrendingUp className="h-6 w-6 text-orange-600" />
+                            <div className="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-xl">
+                                <TrendingUp className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Progression</p>
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Progression</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                     {stats.progressToGoal}%
                                 </p>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Charts */}
+            <div className="grid lg:grid-cols-2 gap-6 mb-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Évolution de l&apos;épargne</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <SavingsAreaChart data={monthlyData} />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Répartition par coffre</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <DistributionPieChart data={distributionData} />
                     </CardContent>
                 </Card>
             </div>
@@ -133,20 +170,20 @@ export default function DashboardPage() {
                                 href={`/dashboard/vaults/${vault.id}`}
                                 className="block"
                             >
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                     <div className="flex-1">
-                                        <h3 className="font-semibold text-gray-900">{vault.name}</h3>
-                                        <p className="text-sm text-gray-500">
+                                        <h3 className="font-semibold text-gray-900 dark:text-white">{vault.name}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
                                             {vault.amount.toLocaleString('fr-FR')} € sur {vault.target.toLocaleString('fr-FR')} €
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="text-right">
-                                            <span className="text-sm font-medium text-emerald-600">
+                                            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                                                 {vault.progress}%
                                             </span>
                                         </div>
-                                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-emerald-500 rounded-full"
                                                 style={{ width: `${vault.progress}%` }}
@@ -160,11 +197,11 @@ export default function DashboardPage() {
 
                     {recentVaults.length === 0 && (
                         <div className="text-center py-12">
-                            <Wallet className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            <Wallet className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                                 Aucun coffre
                             </h3>
-                            <p className="text-gray-500 mb-4">
+                            <p className="text-gray-500 dark:text-gray-400 mb-4">
                                 Créez votre premier coffre d&apos;épargne
                             </p>
                             <Link href="/dashboard/vaults/new">
